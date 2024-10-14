@@ -1,0 +1,55 @@
+services:
+  mosquitto:
+    user: "1883:1883"
+    # image: eclipse-mosquitto:2
+    # image: iegomez/mosquitto-go-auth:2.1.0-mosquitto_1.6.14
+    # image: iegomez/mosquitto-go-auth:2.1.0-mosquitto_2.0.15
+    image: indoomni/mosquitto-go-auth:latest
+    container_name: mosquitto-go-auth
+    volumes:
+      - "./config:/mosquitto/config"
+      # - "./config/mosquitto.conf:/mosquitto/config/mosquitto.conf"
+      - "./data:/mosquitto/data"
+      - "./log:/mosquitto/log"
+      - "../traefik-certs-dumper/output:/mosquitto/certs"
+    networks:
+      - indoomni
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+      # - "9001:9001"
+      - "8083:8083"
+      - "8084:8084"
+    restart: unless-stopped
+
+  management-center:
+    image: cedalo/management-center:2
+    container_name: mosquitto-go-auth-management-center
+    # ports:
+    #   - 8088:8088
+    depends_on:
+      - mosquitto
+    networks:
+      - proxy
+    environment:
+      CEDALO_MC_BROKER_ID: mosquitto-go-auth
+      CEDALO_MC_BROKER_NAME: Mosquitto Go Auth 2.1.0
+      CEDALO_MC_BROKER_URL: mqtt://one-dev.indoomni.app:1883
+      CEDALO_MC_BROKER_USERNAME: admin
+      CEDALO_MC_BROKER_PASSWORD: IndoomniDev123
+      CEDALO_MC_USERNAME: cedalo
+      CEDALO_MC_PASSWORD: IndoomniDev123
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mosquitto.rule=Host(`mosquitto.indoomni.app`)"
+      - "traefik.http.routers.mosquitto.entrypoints=https"
+      - "traefik.http.routers.mosquitto.tls=true"
+      - "traefik.http.routers.mosquitto.service=mosquitto"
+      - "traefik.http.services.mosquitto.loadbalancer.server.port=8088"
+
+networks:
+  indoomni:
+    name: INDOOMNI
+    external: true
+  proxy:
+    external: true
